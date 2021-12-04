@@ -28,3 +28,11 @@ class UserSerializer(serializers.ModelSerializer):
                 fields=['username', 'email']
             )
         ]
+
+
+# class PersonalDashboardSerializer(serializers.ModelSerializer):
+#
+#     def create(self, validated_data):
+#         # TODO ahhhh
+#         return validated_data
+
