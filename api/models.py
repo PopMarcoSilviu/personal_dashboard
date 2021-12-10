@@ -3,8 +3,23 @@ from django.db import models
 
 
 class PersonalDashboard(models.Model):
-    type_of_pd = models.CharField(max_length=10)
+    name = models.CharField(max_length=10, default='NONAME')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    TYPE_OF_PD_CHOICES = [
+        ('DRAWING', 'Drawing'),
+        ('TASK', 'Task'),
+        ('NOTE', 'Note'),
+    ]
+
+    type_of_pd = models.CharField(
+        max_length=7,
+        choices=TYPE_OF_PD_CHOICES,
+        default='TASK'
+    )
+
+    class Meta:
+        unique_together = ('name', 'user')
 
 
 class Note(models.Model):

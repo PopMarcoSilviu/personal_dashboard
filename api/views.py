@@ -1,63 +1,126 @@
-from django.contrib.auth import authenticate
-from django.shortcuts import render
-from .serializers import UserSerializer
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAdminUser, AllowAny
-from django.contrib.auth.models import User
+import json
+import urllib.parse
+
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.http import HttpResponse, JsonResponse
+from django.core import serializers
+
+from api.forms import PersonalDashboardForm, TaskForm, DrawingForm, NoteForm
+from api.models import PersonalDashboard, Task, Drawing, Note
 
 
-class PersonalDashboardView(APIView):
+def errors_as_string(form):
+    data = ''
+    for item in form.errors.as_data().items():
+        data += item[0] + ' ' + item[1][0].message
+        data += ' '
 
-    def get(self, format=None):
-        return Response({'letter': 'a'})
+
+def login_view(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return JsonResponse(data={'id': user.id}, status=200)
+        else:
+            return HttpResponse(status=404, content=form.errors.as_data())
 
 
-class UserRecordView(APIView):
-    """
-    API View to create or get a list of all the registered
-    users. GET request returns the registered users whereas
-    a POST request allows to create a new user.
-    """
-    permission_classes = (AllowAny,)
+def logout_view(request):
+    if request.method == 'POST':
+        logout(request)
+        return HttpResponse(status=200)
+    return HttpResponse(status=404)
 
-    # def get(self, format=None):
-    #     users = User.objects.all()
-    #     serializer = UserSerializer(users, many=True)
-    #     return Response(serializer.data)
 
-    def post(self, request):
-        serializer = UserSerializer(data=request.data)
+def register_view(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            new_user = form.save()
+            login(request, new_user)
+            return HttpResponse(status=201)
+        else:
+            return HttpResponse(status=404, content=errors_as_string(form))
 
-        if serializer.is_valid(raise_exception=ValueError):
-            serializer.create(validated_data=request.data)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-        return Response(
-            {
-                "error": True,
-                "error_msg": serializer.error_messages,
-            },
-            status=status.HTTP_400_BAD_REQUEST
-        )
 
-    # def put(self, request):
-    #
-    #     serializer = UserSerializer(data=request.data).initial_data
-    #     user = authenticate(username=serializer['username'], password=serializer['password'])
-    #
-    #     if user is not None:
-    #         return Response(
-    #             {},
-    #             status=status.HTTP_202_ACCEPTED
-    #         )
-    #     else:
-    #         return Response(
-    #             {},
-    #             status=status.HTTP_400_BAD_REQUEST
-    #         )
+@login_required
+def user_pd_view(request):
+    if request.method == 'GET':
+        try:
+            data = urllib.parse.parse_qs(request.body.decode('utf-8'))
+            data = PersonalDashboard.objects.all().filter(user=request.user, name=data['name'][0])
+            return JsonResponse(data=list(data.values()), safe=False, status=200)
+        except TypeError:
+            return HttpResponse(status=404)
 
-# Create your views here.
+    elif request.method == 'POST':
+        form = PersonalDashboardForm(data=request.POST)
+        form.user = request.user
+
+        data = ''
+        for item in form.errors.as_data().items():
+            data += item[0] + ' ' + item[1][0].message
+            data += ' '
+        if form.is_valid():
+            instance = form.save()
+            return JsonResponse(data={'id': instance.id}, status=201)
+        else:
+            return HttpResponse(status=404, content=data)
+
+
+def user_task_view(request):
+    if request.method == 'POST':
+        form = TaskForm(data=request.POST)
+
+        if form.is_valid():
+            instance = form.save()
+            return HttpResponse(status=201)
+        else:
+            return HttpResponse(status=404, content=errors_as_string(form))
+    elif request.method == 'GET':
+        try:
+            data = urllib.parse.parse_qs(request.body.decode('utf-8'))
+            data = Task.objects.all().filter(name=data['name'][0], pd=data['pd'][0])
+            return JsonResponse(data=list(data.values()), safe=False, status=200)
+        except TypeError:
+            return HttpResponse(status=404)
+
+
+def user_drawing_view(request):
+    if request.method == 'POST':
+        form = DrawingForm(data=request.POST)
+
+        if form.is_valid():
+            instance = form.save()
+            return HttpResponse(status=201)
+        else:
+            return HttpResponse(status=404, content=errors_as_string(form))
+    elif request.method == 'GET':
+        try:
+            data = urllib.parse.parse_qs(request.body.decode('utf-8'))
+            data = Drawing.objects.all().filter(pd=data['pd'][0])
+            return JsonResponse(data=list(data.values()), safe=False, status=200)
+        except TypeError:
+            return HttpResponse(status=404)
+
+
+def user_note_view(request):
+    if request.method == 'POST':
+        form = NoteForm(data=request.POST)
+
+        if form.is_valid():
+            instance = form.save()
+            return HttpResponse(status=201)
+        else:
+            return HttpResponse(status=404, content=errors_as_string(form))
+    elif request.method == 'GET':
+        try:
+            data = urllib.parse.parse_qs(request.body.decode('utf-8'))
+            data = Note.objects.all().filter(name=data['name'][0], pd=data['pd'][0])
+            return JsonResponse(data=list(data.values()), safe=False, status=200)
+        except TypeError:
+            return HttpResponse(status=404)
