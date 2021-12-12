@@ -1,11 +1,10 @@
-import json
+
 import urllib.parse
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.http import HttpResponse, JsonResponse
-from django.core import serializers
 
 from api.forms import PersonalDashboardForm, TaskForm, DrawingForm, NoteForm
 from api.models import PersonalDashboard, Task, Drawing, Note
@@ -21,6 +20,7 @@ def errors_as_string(form):
 def login_view(request):
     if request.method == 'POST':
         form = AuthenticationForm(data=request.POST)
+
         if form.is_valid():
             user = form.get_user()
             login(request, user)
@@ -51,10 +51,12 @@ def register_view(request):
 def user_pd_view(request):
     if request.method == 'GET':
         try:
-            data = urllib.parse.parse_qs(request.body.decode('utf-8'))
-            data = PersonalDashboard.objects.all().filter(user=request.user, name=data['name'][0])
+            if request.GET.get('get_all') == 'True':
+                data = PersonalDashboard.objects.all().filter(user=request.user)
+            else:
+                data = PersonalDashboard.objects.all().filter(user=request.user, name=request.GET.get('name'))
             return JsonResponse(data=list(data.values()), safe=False, status=200)
-        except TypeError:
+        except TypeError as e:
             return HttpResponse(status=404)
 
     elif request.method == 'POST':
