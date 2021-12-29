@@ -12,4 +12,5 @@ urlpatterns = [
     path('user-task/', csrf_exempt(views.user_task_view)),
     path('user-drawing/', csrf_exempt(views.user_drawing_view)),
     path('user-note/', csrf_exempt(views.user_note_view)),
+
 ]

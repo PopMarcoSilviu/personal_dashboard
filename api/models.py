@@ -37,6 +37,7 @@ class Task(models.Model):
 
 
 class Drawing(models.Model):
-    drawing = models.ImageField()
+    drawing = models.TextField()
     date_added = models.DateField(auto_now_add=True)
     pd = models.ForeignKey(PersonalDashboard, on_delete=models.CASCADE, blank=True, null=True)
+    name = models.CharField(max_length=300, blank=True, null=True)

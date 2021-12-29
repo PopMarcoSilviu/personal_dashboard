@@ -1,6 +1,6 @@
-
 import urllib.parse
 
+import requests
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -55,6 +55,7 @@ def user_pd_view(request):
                 data = PersonalDashboard.objects.all().filter(user=request.user)
             else:
                 data = PersonalDashboard.objects.all().filter(user=request.user, name=request.GET.get('name'))
+
             return JsonResponse(data=list(data.values()), safe=False, status=200)
         except TypeError as e:
             return HttpResponse(status=404)
@@ -62,7 +63,6 @@ def user_pd_view(request):
     elif request.method == 'POST':
         form = PersonalDashboardForm(data=request.POST)
         form.user = request.user
-
         data = ''
         for item in form.errors.as_data().items():
             data += item[0] + ' ' + item[1][0].message
@@ -94,8 +94,9 @@ def user_task_view(request):
 
 def user_drawing_view(request):
     if request.method == 'POST':
-        form = DrawingForm(data=request.POST)
-
+        dict_data = request.POST.dict()
+        dict_data['pd'] = PersonalDashboard.objects.all().filter(user=request.user, name=dict_data['name'])[0]
+        form = DrawingForm(data=dict_data)
         if form.is_valid():
             instance = form.save()
             return HttpResponse(status=201)
@@ -103,10 +104,11 @@ def user_drawing_view(request):
             return HttpResponse(status=404, content=errors_as_string(form))
     elif request.method == 'GET':
         try:
-            data = urllib.parse.parse_qs(request.body.decode('utf-8'))
-            data = Drawing.objects.all().filter(pd=data['pd'][0])
-            return JsonResponse(data=list(data.values()), safe=False, status=200)
-        except TypeError:
+            pd_match = PersonalDashboard.objects.all().filter(user=request.user)
+            data = Drawing.objects.all().filter(name=request.GET.get('name'))
+            return JsonResponse(data=data[0].drawing, safe=False, status=200)
+        except TypeError as e:
+            print(str(e))
             return HttpResponse(status=404)
 
 

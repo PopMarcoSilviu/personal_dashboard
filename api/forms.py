@@ -24,4 +24,4 @@ class NoteForm(ModelForm):
 class DrawingForm(ModelForm):
     class Meta:
         model = Drawing
-        fields = ['drawing', 'pd']
+        fields = ['drawing', 'pd', 'name']
